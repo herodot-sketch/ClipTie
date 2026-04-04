@@ -12,7 +12,7 @@ const { exec, execSync } = require('child_process');
 const ICON_B64 = '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';
 
 function writeIcon() {
-  const iconPath = path.join(os.tmpdir(), 'clipbridge.ico');
+  const iconPath = path.join(os.tmpdir(), 'cliptie.ico');
   if (!fs.existsSync(iconPath))
     fs.writeFileSync(iconPath, Buffer.from(ICON_B64, 'base64'));
   return iconPath;
@@ -22,7 +22,7 @@ function writeIcon() {
 const isPkg    = typeof process.pkg !== 'undefined';
 const publicDir = isPkg ? path.join(path.dirname(process.execPath), 'public')
                         : path.join(__dirname, 'public');
-const HISTORY_FILE = path.join(os.homedir(), '.clipbridge-history.json');
+const HISTORY_FILE = path.join(os.homedir(), '.cliptie-history.json');
 
 // ─── History ──────────────────────────────────────────────────────────────────
 function loadHistory() {
@@ -64,11 +64,11 @@ function getAllIPs() {
 
 // ─── Firewall ─────────────────────────────────────────────────────────────────
 // Silently adds a Windows Firewall inbound rule for node.exe on first run.
-// If it fails (e.g. not admin), ClipBridge still works — user sees the README fix.
+// If it fails (e.g. not admin), ClipTie still works — user sees the README fix.
 function ensureFirewallRule() {
   if (process.platform !== 'win32') return;
   const nodePath = process.execPath;
-  const ruleName = 'ClipBridge';
+  const ruleName = 'ClipTie';
   try {
     // Check if rule already exists
     const check = execSync(
@@ -144,7 +144,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const ips  = getAllIPs();
   const primary = ips[0];
   const url  = 'http://' + primary + ':' + PORT;
-  console.log('ClipBridge running at ' + url);
+  console.log('ClipTie running at ' + url);
   if (ips.length > 1)
     console.log('Other addresses: ' + ips.slice(1).map(ip => 'http://' + ip + ':' + PORT).join(', '));
   startTray(ips, url);
@@ -170,9 +170,9 @@ function startTray(ips, primaryUrl) {
     menu: {
       icon:    iconPath,
       title:   '',
-      tooltip: 'ClipBridge — ' + primaryUrl,
+      tooltip: 'ClipTie — ' + primaryUrl,
       items: [
-        { title: '⬡  ClipBridge', tooltip: '', checked: false, enabled: false },
+        { title: '⬡  ClipTie', tooltip: '', checked: false, enabled: false },
         SysTray.separator,
         ...ipItems,
         SysTray.separator,
