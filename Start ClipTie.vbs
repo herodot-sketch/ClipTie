@@ -1,5 +1,5 @@
-' ClipBridge Launcher
-' Double-click this file to start ClipBridge silently in the background.
+' ClipTie Launcher
+' Double-click this file to start ClipTie silently in the background.
 
 Set fso      = CreateObject("Scripting.FileSystemObject")
 Set WshShell = CreateObject("WScript.Shell")
@@ -10,13 +10,13 @@ serverJs  = scriptDir & "\server.js"
 
 ' Check setup has been run
 If Not fso.FileExists(nodeExe) Then
-    MsgBox "node.exe not found in the ClipBridge folder." & vbCrLf & vbCrLf & _
-           "Please run SETUP.bat first.", 16, "ClipBridge"
+    MsgBox "node.exe not found in the ClipTie folder." & vbCrLf & vbCrLf & _
+           "Please run SETUP.bat first.", 16, "ClipTie"
     WScript.Quit
 End If
 
 If Not fso.FileExists(serverJs) Then
-    MsgBox "server.js not found. Make sure all ClipBridge files are together.", 16, "ClipBridge"
+    MsgBox "server.js not found. Make sure all ClipTie files are together.", 16, "ClipTie"
     WScript.Quit
 End If
 
