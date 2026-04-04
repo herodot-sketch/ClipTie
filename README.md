@@ -47,7 +47,7 @@ The server starts with a single double-click and lives quietly in the Windows sy
 ## Requirements
 
 - **Windows PC** — Windows 10 or later
-- **Node.js** — Download and install from [nodejs.org](https://nodejs.org) (choose the LTS version)
+- **Node.js** — Download and install from [nodejs.org](https://nodejs.org) choose the LTS version or Windows Installer (.msi)
 - **Phone or other device** — Any browser, no install needed
 
 ---
@@ -58,7 +58,7 @@ The server starts with a single double-click and lives quietly in the Windows sy
 
 **1. Install Node.js**
 
-Go to [nodejs.org](https://nodejs.org), download the **LTS** version for Windows, and run the installer. Click through the defaults — no custom options needed.
+Go to [nodejs.org](https://nodejs.org), download the **LTS** version for Windows or Windows Installer (.msi), and run the installer. Click through the defaults — no custom options needed.
 
 Verify it worked by opening CMD and typing:
 ```
