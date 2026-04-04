@@ -2,6 +2,8 @@
 
 > Instant text sharing between your Windows PC and any device with a browser — over local Wi-Fi, no internet required.
 
+<img width="1029" height="1029" alt="Clip (1)" src="https://github.com/user-attachments/assets/84fd7805-6ccc-4d73-a3a5-513ab41cb8fc" /><img width="1035" height="1035" alt="Clip (2)" src="https://github.com/user-attachments/assets/97da5892-3b0c-47b9-9f45-5bc8bdc53f01" />
+
 ---
 
 ## The Story
