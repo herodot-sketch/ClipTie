@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipBridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0e0e0e;
+    --surface:  #161616;
+    --border:   #252525;
+    --border2:  #2f2f2f;
+    --text:     #d8d8d8;
+    --muted:    #555;
+    --amber:    #f5a623;
+    --amber-d:  #c47d0e;
+    --amber-bg: rgba(245,166,35,0.07);
+    --red:      #e05555;
+    --green:    #4caf7d;
+    --radius:   6px;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  /* ── Layout ── */
+  .shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px 60px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 0 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    color: var(--amber);
+  }
+
+  .logo svg { flex-shrink: 0; }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    transition: color .3s;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background .3s, box-shadow .3s;
+  }
+
+  .status.live .status-dot {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+  .status.live { color: var(--green); }
+
+  /* ── Compose area ── */
+  .compose {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    transition: border-color .2s;
+  }
+  .compose:focus-within { border-color: var(--amber); }
+
+  #input {
+    width: 100%;
+    min-height: 130px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    caret-color: var(--amber);
+  }
+
+  #input::placeholder { color: var(--muted); }
+
+  .compose-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .char-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .btn-send {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--amber);
+    color: #0e0e0e;
+    border: none;
+    border-radius: var(--radius);
+    padding: 8px 18px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .btn-send:hover  { background: #f9b74a; }
+  .btn-send:active { transform: scale(.97); }
+  .btn-send:disabled { opacity: .4; cursor: default; }
+
+  /* Ctrl+Enter hint */
+  .hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: -18px;
+    margin-bottom: 24px;
+    padding-left: 2px;
+  }
+  kbd {
+    background: var(--border2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  /* ── History header ── */
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .history-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+  }
+
+  .btn-clear {
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── History list ── */
+  #history { display: flex; flex-direction: column; gap: 10px; }
+
+  .entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    animation: slideIn .2s ease;
+    position: relative;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry-text {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 10px;
+    max-height: 200px;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+
+  .entry-text.expanded {
+    max-height: none;
+    mask-image: none;
+  }
+
+  .entry-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .entry-ts {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .entry-actions { display: flex; gap: 6px; }
+
+  .btn-icon {
+    background: var(--border);
+    border: none;
+    border-radius: var(--radius);
+    color: var(--muted);
+    padding: 5px 10px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-icon:hover { background: var(--border2); color: var(--text); }
+
+  .btn-copy:hover  { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-d); }
+  .btn-delete:hover { background: rgba(224,85,85,.12); color: var(--red); }
+
+  .btn-copy.copied { background: var(--amber-bg); color: var(--amber); }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--amber);
+    color: #0e0e0e;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 30px;
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Connecting overlay ── */
+  #connecting {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 200;
+    transition: opacity .3s;
+  }
+  #connecting.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .conn-label { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  /* ── QR Panel ── */
+  .qr-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .qr-box {
+    flex-shrink: 0;
+    background: #fff;
+    padding: 6px;
+    border-radius: 4px;
+    line-height: 0;
+  }
+
+  .qr-box canvas, .qr-box img { display: block; }
+
+  .qr-info { flex: 1; min-width: 0; }
+
+  .qr-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .qr-url {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--amber);
+    word-break: break-all;
+    margin-bottom: 8px;
+  }
+
+  .qr-hint {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .qr-toggle {
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    margin-bottom: 28px;
+    margin-top: -18px;
+    transition: border-color .2s, color .2s;
+  }
+  .qr-toggle:hover { border-color: var(--amber); color: var(--amber); }
+
+  @media (max-width: 480px) {
+    header { padding: 16px 0 14px; }
+    .logo  { font-size: 13px; }
+    .qr-panel { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div id="connecting">
+  <div class="spinner"></div>
+  <div class="conn-label">connecting…</div>
+</div>
+
+<div class="shell">
+  <header>
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="5" y="2" width="12" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="8" y="0" width="6" height="5" rx="1" fill="currentColor"/>
+        <line x1="8" y1="9"  x2="14" y2="9"  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="8" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="8" y1="15" x2="11" y2="15" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      ClipBridge
+    </div>
+    <div class="status" id="status">
+      <div class="status-dot"></div>
+      <span id="status-text">offline</span>
+    </div>
+  </header>
+
+  <button class="qr-toggle" id="qr-toggle">▼ Show phone QR code</button>
+
+  <div class="qr-panel" id="qr-panel" style="display:none">
+    <div class="qr-box" id="qr-box"></div>
+    <div class="qr-info">
+      <div class="qr-title">Open on phone</div>
+      <div class="qr-url" id="qr-url"></div>
+      <div class="qr-hint">Scan with your phone camera or any QR reader to open ClipBridge instantly.</div>
+    </div>
+  </div>
+
+  <div class="compose">
+    <textarea id="input" placeholder="Paste or type text here…" spellcheck="false"></textarea>
+    <div class="compose-footer">
+      <span class="char-count" id="char-count">0 chars</span>
+      <button class="btn-send" id="btn-send" disabled>
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Send
+      </button>
+    </div>
+  </div>
+
+  <p class="hint">
+    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send
+  </p>
+
+  <div class="history-header">
+    <span class="history-label" id="history-label">History</span>
+    <button class="btn-clear" id="btn-clear">Clear all</button>
+  </div>
+
+  <div id="history"></div>
+</div>
+
+<div id="toast">Copied!</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const input     = $('input');
+  const btnSend   = $('btn-send');
+  const historyEl = $('history');
+  const statusEl  = $('status');
+  const statusTxt = $('status-text');
+  const charCount = $('char-count');
+  const toast     = $('toast');
+  const connecting = $('connecting');
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  let ws, reconnectTimer;
+
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(proto + '://' + location.host);
+
+    ws.onopen = () => {
+      clearTimeout(reconnectTimer);
+      statusEl.classList.add('live');
+      statusTxt.textContent = 'live';
+      connecting.classList.add('hidden');
+    };
+
+    ws.onclose = () => {
+      statusEl.classList.remove('live');
+      statusTxt.textContent = 'reconnecting…';
+      reconnectTimer = setTimeout(connect, 2000);
+    };
+
+    ws.onmessage = ({ data }) => {
+      const msg = JSON.parse(data);
+      if      (msg.type === 'history') renderAll(msg.data);
+      else if (msg.type === 'new')     prependEntry(msg.data);
+      else if (msg.type === 'deleted') removeEntry(msg.id);
+      else if (msg.type === 'cleared') { historyEl.innerHTML = ''; updateLabel(0); }
+    };
+  }
+
+  connect();
+
+  // ── Send ───────────────────────────────────────────────────────────────────
+  function send() {
+    const text = input.value;
+    if (!text.trim() || !ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: 'send', text }));
+    input.value = '';
+    charCount.textContent = '0 chars';
+    btnSend.disabled = true;
+  }
+
+  btnSend.addEventListener('click', send);
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }
+  });
+
+  input.addEventListener('input', () => {
+    const n = input.value.length;
+    charCount.textContent = n.toLocaleString() + ' char' + (n === 1 ? '' : 's');
+    btnSend.disabled = n === 0;
+  });
+
+  // ── Clear all ──────────────────────────────────────────────────────────────
+  $('btn-clear').addEventListener('click', () => {
+    if (historyEl.children.length === 0) return;
+    if (!confirm('Clear all history on all devices?')) return;
+    ws.send(JSON.stringify({ type: 'clear' }));
+  });
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderAll(entries) {
+    historyEl.innerHTML = '';
+    if (entries.length === 0) {
+      historyEl.innerHTML = '<div class="empty">No entries yet.<br>Send something from any device.</div>';
+    } else {
+      entries.forEach(e => historyEl.appendChild(buildCard(e)));
+    }
+    updateLabel(entries.length);
+  }
+
+  function prependEntry(entry) {
+    const empty = historyEl.querySelector('.empty');
+    if (empty) empty.remove();
+    historyEl.insertBefore(buildCard(entry), historyEl.firstChild);
+    updateLabel(historyEl.querySelectorAll('.entry').length);
+  }
+
+  function removeEntry(id) {
+    const el = historyEl.querySelector('[data-id="' + id + '"]');
+    if (el) { el.style.opacity = '0'; el.style.transform = 'scale(.97)'; el.style.transition = 'all .2s'; setTimeout(() => el.remove(), 200); }
+    setTimeout(() => {
+      updateLabel(historyEl.querySelectorAll('.entry').length);
+      if (historyEl.querySelectorAll('.entry').length === 0)
+        historyEl.innerHTML = '<div class="empty">No entries yet.<br>Send something from any device.</div>';
+    }, 250);
+  }
+
+  function buildCard(entry) {
+    const el = document.createElement('div');
+    el.className = 'entry';
+    el.dataset.id = entry.id;
+
+    const textEl = document.createElement('div');
+    textEl.className = 'entry-text';
+    textEl.textContent = entry.text;
+
+    const footer = document.createElement('div');
+    footer.className = 'entry-footer';
+
+    const ts = document.createElement('span');
+    ts.className = 'entry-ts';
+    ts.textContent = formatDate(entry.ts);
+
+    const actions = document.createElement('div');
+    actions.className = 'entry-actions';
+
+    // Expand/collapse for long text
+    if (entry.text.length > 300 || entry.text.split('\n').length > 8) {
+      const btnExpand = document.createElement('button');
+      btnExpand.className = 'btn-icon';
+      btnExpand.textContent = '↕ expand';
+      btnExpand.addEventListener('click', () => {
+        textEl.classList.toggle('expanded');
+        btnExpand.textContent = textEl.classList.contains('expanded') ? '↕ collapse' : '↕ expand';
+      });
+      actions.appendChild(btnExpand);
+    }
+
+    const btnCopy = document.createElement('button');
+    btnCopy.className = 'btn-icon btn-copy';
+    btnCopy.innerHTML = '⊕ copy';
+    btnCopy.addEventListener('click', () => {
+      copyText(entry.text).then(() => {
+        btnCopy.textContent = '✓ copied';
+        btnCopy.classList.add('copied');
+        showToast('Copied to clipboard');
+        setTimeout(() => { btnCopy.innerHTML = '⊕ copy'; btnCopy.classList.remove('copied'); }, 1800);
+      }).catch(() => {
+        showToast('Copy failed — try selecting manually');
+      });
+    });
+
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn-icon btn-delete';
+    btnDel.innerHTML = '✕';
+    btnDel.title = 'Delete';
+    btnDel.addEventListener('click', () => {
+      ws.send(JSON.stringify({ type: 'delete', id: entry.id }));
+    });
+
+    actions.appendChild(btnCopy);
+    actions.appendChild(btnDel);
+    footer.appendChild(ts);
+    footer.appendChild(actions);
+    el.appendChild(textEl);
+    el.appendChild(footer);
+    return el;
+  }
+
+  function updateLabel(n) {
+    $('history-label').textContent = 'History' + (n > 0 ? ' · ' + n : '');
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+         + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  // ── Clipboard (works on HTTP too) ─────────────────────────────────────────
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // HTTP fallback via execCommand
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy') ? resolve() : reject();
+      } catch(e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  }
+
+  // ── QR Code ───────────────────────────────────────────────────────────────
+  const qrPanel  = $('qr-panel');
+  const qrToggle = $('qr-toggle');
+  const qrUrl    = $('qr-url');
+  let qrGenerated = false;
+
+  qrToggle.addEventListener('click', () => {
+    const visible = qrPanel.style.display !== 'none';
+    qrPanel.style.display = visible ? 'none' : 'flex';
+    qrToggle.textContent  = visible ? '▼ Show phone QR code' : '▲ Hide QR code';
+
+    if (!qrGenerated) {
+      const url = window.location.href;
+      qrUrl.textContent = url;
+      new QRCode($('qr-box'), {
+        text:         url,
+        width:        120,
+        height:       120,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      qrGenerated = true;
+    }
+  });
+</script>
+</body>
+</html>
