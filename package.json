@@ -1,5 +1,5 @@
 {
-  "name": "clipbridge",
+  "name": "cliptie",
   "version": "1.0.0",
   "description": "Local clipboard sync between Windows and Android",
   "main": "server.js",
