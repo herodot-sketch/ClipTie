@@ -2,10 +2,9 @@
 
 > Instant text sharing between your Windows PC and any device with a browser — over local Wi-Fi, no internet required.
 
-<img width="1028" height="1028" alt="ClipBridge (2)" src="https://github.com/user-attachments/assets/7d6c3622-21a2-4d82-a15b-cf27f9819c9a" />
+<img width="1028" height="1028" alt="ClipBridge (2)" src="https://github.com/user-attachments/assets/7d6c3622-21a2-4d82-a15b-cf27f9819c9a" /><img width="1037" height="1037" alt="ClipBridge (1)" src="https://github.com/user-attachments/assets/4d0f2891-be66-42aa-b786-7b97942252db" />
 
----<img width="1037" height="1037" alt="ClipBridge (1)" src="https://github.com/user-attachments/assets/30521b08-c81e-4fb7-9f28-0ca25e20d021" />
-
+---
 
 ## The Story
 
