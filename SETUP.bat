@@ -1,14 +1,14 @@
 @echo off
-title ClipBridge Setup
+title ClipTie Setup
 echo.
 echo  =========================================
-echo   ClipBridge - First Time Setup
+echo   ClipTie - First Time Setup
 echo  =========================================
 echo.
 
 :: Check if already set up
 if exist "%~dp0node.exe" (
-    echo  ClipBridge is already set up.
+    echo  ClipTie is already set up.
     echo  You can delete this setup file if you like.
     echo.
     pause
@@ -47,7 +47,7 @@ exit /b 1
 :found
 echo  Found Node.js at: %NODE_PATH%
 echo.
-echo  Copying node.exe into ClipBridge folder...
+echo  Copying node.exe into ClipTie folder...
 copy "%NODE_PATH%" "%~dp0node.exe"
 if errorlevel 1 (
     echo.
@@ -74,7 +74,7 @@ echo.
 echo  =========================================
 echo   Setup complete!
 echo.
-echo   Double-click "Start ClipBridge.vbs"
+echo   Double-click "Start ClipTie.vbs"
 echo   to launch the app.
 echo  =========================================
 echo.
