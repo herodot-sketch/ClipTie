@@ -9,384 +9,95 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg:       #0e0e0e;
-    --surface:  #161616;
-    --border:   #252525;
-    --border2:  #2f2f2f;
-    --text:     #d8d8d8;
-    --muted:    #555;
-    --amber:    #f5a623;
-    --amber-d:  #c47d0e;
-    --amber-bg: rgba(245,166,35,0.07);
-    --red:      #e05555;
-    --green:    #4caf7d;
-    --radius:   6px;
-    --mono:     'JetBrains Mono', monospace;
-    --sans:     'DM Sans', sans-serif;
+    --bg:#0e0e0e; --surface:#161616; --border:#252525; --border2:#2f2f2f;
+    --text:#d8d8d8; --muted:#555; --amber:#f5a623; --amber-d:#c47d0e;
+    --amber-bg:rgba(245,166,35,0.07); --red:#e05555; --green:#4caf7d;
+    --radius:6px; --mono:'JetBrains Mono',monospace; --sans:'DM Sans',sans-serif;
   }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  .shell{max-width:720px;margin:0 auto;padding:0 16px 60px;min-height:100vh;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:22px 0 18px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+  .logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.03em;color:var(--amber);}
+  .logo svg{flex-shrink:0;}
+  .status{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--muted);transition:color .3s;}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .3s,box-shadow .3s;}
+  .status.live .status-dot{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .status.live{color:var(--green);}
 
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  /* Network banner */
+  #net-banner{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surface);border:1px solid var(--amber);border-radius:var(--radius);padding:12px 18px;font-family:var(--mono);font-size:12px;color:var(--text);z-index:150;opacity:0;transition:opacity .3s,transform .3s;text-align:center;line-height:1.8;max-width:90vw;}
+  #net-banner.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #net-banner a{color:var(--amber);text-decoration:none;font-weight:700;}
+  #net-banner a:hover{text-decoration:underline;}
+  #net-banner-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;margin-left:10px;vertical-align:middle;}
 
-  /* ── Layout ── */
-  .shell {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 16px 60px;
-    min-height: 100vh;
-  }
+  /* QR */
+  .qr-toggle{background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--muted);font-family:var(--sans);font-size:11px;padding:4px 10px;cursor:pointer;margin-bottom:24px;transition:border-color .2s,color .2s;}
+  .qr-toggle:hover{border-color:var(--amber);color:var(--amber);}
+  .qr-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:24px;display:flex;align-items:center;gap:18px;}
+  .qr-box{flex-shrink:0;background:#fff;padding:6px;border-radius:4px;line-height:0;}
+  .qr-box canvas,.qr-box img{display:block;}
+  .qr-info{flex:1;min-width:0;}
+  .qr-title{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
+  .qr-url{font-family:var(--mono);font-size:13px;color:var(--amber);word-break:break-all;margin-bottom:8px;}
+  .qr-hint{font-family:var(--sans);font-size:12px;color:var(--muted);line-height:1.5;}
 
-  /* ── Header ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 22px 0 18px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 28px;
-  }
+  /* Compose */
+  .compose{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;transition:border-color .2s;}
+  .compose:focus-within{border-color:var(--amber);}
+  #input{width:100%;min-height:130px;background:transparent;border:none;outline:none;resize:vertical;padding:16px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--text);caret-color:var(--amber);}
+  #input::placeholder{color:var(--muted);}
+  .compose-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);}
+  .char-count{font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .btn-send{display:flex;align-items:center;gap:7px;background:var(--amber);color:#0e0e0e;border:none;border-radius:var(--radius);padding:8px 18px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;}
+  .btn-send:hover{background:#f9b74a;}
+  .btn-send:active{transform:scale(.97);}
+  .btn-send:disabled{opacity:.4;cursor:default;}
+  .hint{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:-18px;margin-bottom:24px;padding-left:2px;}
+  kbd{background:var(--border2);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-family:var(--mono);font-size:10px;}
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: .03em;
-    color: var(--amber);
-  }
+  /* History */
+  .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .history-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+  .btn-clear{background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--muted);font-family:var(--sans);font-size:11px;padding:4px 10px;cursor:pointer;transition:border-color .2s,color .2s;}
+  .btn-clear:hover{border-color:var(--red);color:var(--red);}
+  #history{display:flex;flex-direction:column;gap:10px;}
+  .entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;animation:slideIn .2s ease;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+  .entry-text{font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;margin-bottom:10px;max-height:200px;overflow:hidden;mask-image:linear-gradient(to bottom,black 70%,transparent 100%);}
+  .entry-text.expanded{max-height:none;mask-image:none;}
+  .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .entry-ts{font-family:var(--mono);font-size:10px;color:var(--muted);flex:1;}
+  .entry-actions{display:flex;gap:6px;}
+  .btn-icon{background:var(--border);border:none;border-radius:var(--radius);color:var(--muted);padding:5px 10px;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;gap:5px;}
+  .btn-icon:hover{background:var(--border2);color:var(--text);}
+  .btn-copy:hover{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-d);}
+  .btn-delete:hover{background:rgba(224,85,85,.12);color:var(--red);}
+  .btn-copy.copied{background:var(--amber-bg);color:var(--amber);}
+  .empty{text-align:center;padding:60px 20px;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:2;}
 
-  .logo svg { flex-shrink: 0; }
+  /* Toast */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--amber);color:#0e0e0e;font-family:var(--sans);font-size:13px;font-weight:600;padding:10px 20px;border-radius:30px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:100;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    transition: color .3s;
-  }
+  /* Connecting overlay */
+  #connecting{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:200;transition:opacity .3s;}
+  #connecting.hidden{opacity:0;pointer-events:none;}
+  .spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .conn-label{font-family:var(--mono);font-size:12px;color:var(--muted);}
 
-  .status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background .3s, box-shadow .3s;
-  }
-
-  .status.live .status-dot {
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-  }
-  .status.live { color: var(--green); }
-
-  /* ── Compose area ── */
-  .compose {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 24px;
-    transition: border-color .2s;
-  }
-  .compose:focus-within { border-color: var(--amber); }
-
-  #input {
-    width: 100%;
-    min-height: 130px;
-    background: transparent;
-    border: none;
-    outline: none;
-    resize: vertical;
-    padding: 16px;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text);
-    caret-color: var(--amber);
-  }
-
-  #input::placeholder { color: var(--muted); }
-
-  .compose-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-top: 1px solid var(--border);
-  }
-
-  .char-count {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .btn-send {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    background: var(--amber);
-    color: #0e0e0e;
-    border: none;
-    border-radius: var(--radius);
-    padding: 8px 18px;
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .15s, transform .1s;
-  }
-  .btn-send:hover  { background: #f9b74a; }
-  .btn-send:active { transform: scale(.97); }
-  .btn-send:disabled { opacity: .4; cursor: default; }
-
-  /* Ctrl+Enter hint */
-  .hint {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: -18px;
-    margin-bottom: 24px;
-    padding-left: 2px;
-  }
-  kbd {
-    background: var(--border2);
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 1px 5px;
-    font-family: var(--mono);
-    font-size: 10px;
-  }
-
-  /* ── History header ── */
-  .history-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  .history-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--muted);
-  }
-
-  .btn-clear {
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 11px;
-    padding: 4px 10px;
-    cursor: pointer;
-    transition: border-color .2s, color .2s;
-  }
-  .btn-clear:hover { border-color: var(--red); color: var(--red); }
-
-  /* ── History list ── */
-  #history { display: flex; flex-direction: column; gap: 10px; }
-
-  .entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-    animation: slideIn .2s ease;
-    position: relative;
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .entry-text {
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-    margin-bottom: 10px;
-    max-height: 200px;
-    overflow: hidden;
-    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
-  }
-
-  .entry-text.expanded {
-    max-height: none;
-    mask-image: none;
-  }
-
-  .entry-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .entry-ts {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    flex: 1;
-  }
-
-  .entry-actions { display: flex; gap: 6px; }
-
-  .btn-icon {
-    background: var(--border);
-    border: none;
-    border-radius: var(--radius);
-    color: var(--muted);
-    padding: 5px 10px;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background .15s, color .15s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .btn-icon:hover { background: var(--border2); color: var(--text); }
-
-  .btn-copy:hover  { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-d); }
-  .btn-delete:hover { background: rgba(224,85,85,.12); color: var(--red); }
-
-  .btn-copy.copied { background: var(--amber-bg); color: var(--amber); }
-
-  /* ── Empty state ── */
-  .empty {
-    text-align: center;
-    padding: 60px 20px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 2;
-  }
-
-  /* ── Toast ── */
-  #toast {
-    position: fixed;
-    bottom: 28px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--amber);
-    color: #0e0e0e;
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 20px;
-    border-radius: 30px;
-    opacity: 0;
-    transition: opacity .2s, transform .2s;
-    pointer-events: none;
-    z-index: 100;
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  /* ── Connecting overlay ── */
-  #connecting {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 200;
-    transition: opacity .3s;
-  }
-  #connecting.hidden { opacity: 0; pointer-events: none; }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--amber);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .conn-label { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-
-  /* ── QR Panel ── */
-  .qr-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-
-  .qr-box {
-    flex-shrink: 0;
-    background: #fff;
-    padding: 6px;
-    border-radius: 4px;
-    line-height: 0;
-  }
-
-  .qr-box canvas, .qr-box img { display: block; }
-
-  .qr-info { flex: 1; min-width: 0; }
-
-  .qr-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  .qr-url {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--amber);
-    word-break: break-all;
-    margin-bottom: 8px;
-  }
-
-  .qr-hint {
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  .qr-toggle {
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 11px;
-    padding: 4px 10px;
-    cursor: pointer;
-    margin-bottom: 28px;
-    margin-top: -18px;
-    transition: border-color .2s, color .2s;
-  }
-  .qr-toggle:hover { border-color: var(--amber); color: var(--amber); }
-
-  @media (max-width: 480px) {
-    header { padding: 16px 0 14px; }
-    .logo  { font-size: 13px; }
-    .qr-panel { flex-direction: column; align-items: flex-start; }
+  @media(max-width:480px){
+    header{padding:16px 0 14px;}
+    .logo{font-size:13px;}
+    .qr-panel{flex-direction:column;align-items:flex-start;}
   }
 </style>
 </head>
 <body>
+
+<div id="net-banner"></div>
 
 <div id="connecting">
   <div class="spinner"></div>
@@ -435,9 +146,7 @@
     </div>
   </div>
 
-  <p class="hint">
-    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send
-  </p>
+  <p class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send</p>
 
   <div class="history-header">
     <span class="history-label" id="history-label">History</span>
@@ -447,18 +156,23 @@
   <div id="history"></div>
 </div>
 
-<div id="toast">Copied!</div>
+<div id="toast"></div>
 
 <script>
   const $ = id => document.getElementById(id);
-  const input     = $('input');
-  const btnSend   = $('btn-send');
-  const historyEl = $('history');
-  const statusEl  = $('status');
-  const statusTxt = $('status-text');
-  const charCount = $('char-count');
-  const toast     = $('toast');
+  const input      = $('input');
+  const btnSend    = $('btn-send');
+  const historyEl  = $('history');
+  const statusEl   = $('status');
+  const statusTxt  = $('status-text');
+  const charCount  = $('char-count');
+  const toast      = $('toast');
   const connecting = $('connecting');
+  const netBanner  = $('net-banner');
+
+  let currentIPs  = [];
+  let qrGenerated = false;
+  let qrVisible   = false;
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
@@ -486,10 +200,35 @@
       else if (msg.type === 'new')     prependEntry(msg.data);
       else if (msg.type === 'deleted') removeEntry(msg.id);
       else if (msg.type === 'cleared') { historyEl.innerHTML = ''; updateLabel(0); }
+      else if (msg.type === 'network') handleNetworkChange(msg.ips, msg.port);
     };
   }
 
   connect();
+
+  // ── Network change ─────────────────────────────────────────────────────────
+  function handleNetworkChange(ips, port) {
+    const prev = currentIPs.join(',');
+    currentIPs = ips;
+
+    if (qrVisible) refreshQR('http://' + ips[0] + ':' + port);
+
+    if (prev && prev !== ips.join(',')) {
+      const primary = ips[0];
+      const newUrl  = 'http://' + primary + ':' + port;
+      let html = '🔄 Network changed &nbsp;→&nbsp; <a href="' + newUrl + '">' + newUrl + '</a>';
+      if (ips.length > 1) {
+        html += '<br><span style="color:var(--muted);font-size:11px">Also: '
+              + ips.slice(1).map(ip => 'http://' + ip + ':' + port).join('&nbsp; · &nbsp;') + '</span>';
+      }
+      html += '&nbsp; <button id="net-banner-close">✕</button>';
+      netBanner.innerHTML = html;
+      netBanner.classList.add('show');
+      $('net-banner-close').onclick = () => netBanner.classList.remove('show');
+      clearTimeout(netBanner._t);
+      netBanner._t = setTimeout(() => netBanner.classList.remove('show'), 12000);
+    }
+  }
 
   // ── Send ───────────────────────────────────────────────────────────────────
   function send() {
@@ -502,22 +241,37 @@
   }
 
   btnSend.addEventListener('click', send);
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }
-  });
-
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); } });
   input.addEventListener('input', () => {
     const n = input.value.length;
     charCount.textContent = n.toLocaleString() + ' char' + (n === 1 ? '' : 's');
     btnSend.disabled = n === 0;
   });
 
-  // ── Clear all ──────────────────────────────────────────────────────────────
   $('btn-clear').addEventListener('click', () => {
     if (historyEl.children.length === 0) return;
     if (!confirm('Clear all history on all devices?')) return;
     ws.send(JSON.stringify({ type: 'clear' }));
+  });
+
+  // ── QR Code ───────────────────────────────────────────────────────────────
+  const qrPanel = $('qr-panel');
+  const qrToggle = $('qr-toggle');
+  const qrUrlEl  = $('qr-url');
+  const qrBox    = $('qr-box');
+
+  function refreshQR(url) {
+    qrBox.innerHTML = '';
+    qrUrlEl.textContent = url;
+    new QRCode(qrBox, { text: url, width: 120, height: 120, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+    qrGenerated = true;
+  }
+
+  qrToggle.addEventListener('click', () => {
+    qrVisible = !qrVisible;
+    qrPanel.style.display = qrVisible ? 'flex' : 'none';
+    qrToggle.textContent  = qrVisible ? '▲ Hide QR code' : '▼ Show phone QR code';
+    if (qrVisible && !qrGenerated) refreshQR(window.location.href);
   });
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -540,10 +294,10 @@
 
   function removeEntry(id) {
     const el = historyEl.querySelector('[data-id="' + id + '"]');
-    if (el) { el.style.opacity = '0'; el.style.transform = 'scale(.97)'; el.style.transition = 'all .2s'; setTimeout(() => el.remove(), 200); }
+    if (el) { el.style.cssText += 'opacity:0;transform:scale(.97);transition:all .2s;'; setTimeout(() => el.remove(), 200); }
     setTimeout(() => {
       updateLabel(historyEl.querySelectorAll('.entry').length);
-      if (historyEl.querySelectorAll('.entry').length === 0)
+      if (!historyEl.querySelectorAll('.entry').length)
         historyEl.innerHTML = '<div class="empty">No entries yet.<br>Send something from any device.</div>';
     }, 250);
   }
@@ -557,7 +311,7 @@
     textEl.className = 'entry-text';
     textEl.textContent = entry.text;
 
-    const footer = document.createElement('div');
+    const footer  = document.createElement('div');
     footer.className = 'entry-footer';
 
     const ts = document.createElement('span');
@@ -567,7 +321,6 @@
     const actions = document.createElement('div');
     actions.className = 'entry-actions';
 
-    // Expand/collapse for long text
     if (entry.text.length > 300 || entry.text.split('\n').length > 8) {
       const btnExpand = document.createElement('button');
       btnExpand.className = 'btn-icon';
@@ -588,18 +341,14 @@
         btnCopy.classList.add('copied');
         showToast('Copied to clipboard');
         setTimeout(() => { btnCopy.innerHTML = '⊕ copy'; btnCopy.classList.remove('copied'); }, 1800);
-      }).catch(() => {
-        showToast('Copy failed — try selecting manually');
-      });
+      }).catch(() => showToast('Copy failed — try selecting manually'));
     });
 
     const btnDel = document.createElement('button');
     btnDel.className = 'btn-icon btn-delete';
     btnDel.innerHTML = '✕';
     btnDel.title = 'Delete';
-    btnDel.addEventListener('click', () => {
-      ws.send(JSON.stringify({ type: 'delete', id: entry.id }));
-    });
+    btnDel.addEventListener('click', () => ws.send(JSON.stringify({ type: 'delete', id: entry.id })));
 
     actions.appendChild(btnCopy);
     actions.appendChild(btnDel);
@@ -620,6 +369,21 @@
          + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   }
 
+  // ── Clipboard (works on HTTP too) ─────────────────────────────────────────
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy') ? resolve() : reject(); }
+      catch(e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  }
+
   // ── Toast ──────────────────────────────────────────────────────────────────
   let toastTimer;
   function showToast(msg) {
@@ -628,52 +392,6 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
   }
-
-  // ── Clipboard (works on HTTP too) ─────────────────────────────────────────
-  function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      return navigator.clipboard.writeText(text);
-    }
-    // HTTP fallback via execCommand
-    return new Promise((resolve, reject) => {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try {
-        document.execCommand('copy') ? resolve() : reject();
-      } catch(e) { reject(e); }
-      document.body.removeChild(ta);
-    });
-  }
-
-  // ── QR Code ───────────────────────────────────────────────────────────────
-  const qrPanel  = $('qr-panel');
-  const qrToggle = $('qr-toggle');
-  const qrUrl    = $('qr-url');
-  let qrGenerated = false;
-
-  qrToggle.addEventListener('click', () => {
-    const visible = qrPanel.style.display !== 'none';
-    qrPanel.style.display = visible ? 'none' : 'flex';
-    qrToggle.textContent  = visible ? '▼ Show phone QR code' : '▲ Hide QR code';
-
-    if (!qrGenerated) {
-      const url = window.location.href;
-      qrUrl.textContent = url;
-      new QRCode($('qr-box'), {
-        text:         url,
-        width:        120,
-        height:       120,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-      qrGenerated = true;
-    }
-  });
 </script>
 </body>
 </html>
