@@ -19,7 +19,7 @@ function writeIcon() {
 }
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
-const isPkg    = typeof process.pkg !== 'undefined';
+const isPkg     = typeof process.pkg !== 'undefined';
 const publicDir = isPkg ? path.join(path.dirname(process.execPath), 'public')
                         : path.join(__dirname, 'public');
 const HISTORY_FILE = path.join(os.homedir(), '.cliptie-history.json');
@@ -38,18 +38,14 @@ function saveHistory(h) {
 }
 
 // ─── Network helpers ──────────────────────────────────────────────────────────
-// Returns all non-internal IPv4 addresses, sorted so local LAN addresses
-// (192.168.x.x and 172.16-31.x.x) come before VPN-style addresses (10.x.x.x).
 function getAllIPs() {
   const results = [];
   for (const ifaces of Object.values(os.networkInterfaces())) {
     for (const iface of ifaces) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === 'IPv4' && !iface.internal)
         results.push(iface.address);
-      }
     }
   }
-  // Sort: prefer 192.168.x.x and 172.x.x.x over 10.x.x.x (common VPN range)
   results.sort((a, b) => {
     const score = ip => {
       if (ip.startsWith('192.168.')) return 0;
@@ -63,21 +59,17 @@ function getAllIPs() {
 }
 
 // ─── Firewall ─────────────────────────────────────────────────────────────────
-// Silently adds a Windows Firewall inbound rule for node.exe on first run.
-// If it fails (e.g. not admin), ClipTie still works — user sees the README fix.
 function ensureFirewallRule() {
   if (process.platform !== 'win32') return;
   const nodePath = process.execPath;
   const ruleName = 'ClipTie';
   try {
-    // Check if rule already exists
     const check = execSync(
       'netsh advfirewall firewall show rule name="' + ruleName + '"',
       { stdio: 'pipe' }
     ).toString();
-    if (check.includes(ruleName)) return; // already set
+    if (check.includes(ruleName)) return;
   } catch (_) {}
-  // Add the rule silently
   try {
     execSync(
       'netsh advfirewall firewall add rule' +
@@ -87,14 +79,14 @@ function ensureFirewallRule() {
       ' profile=private,public',
       { stdio: 'pipe' }
     );
-  } catch (_) {
-    // Silently ignore — user may not be running as admin
-  }
+  } catch (_) {}
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let history = loadHistory();
 const clients = new Set();
+let trayRef   = null;   // set once tray is created
+let currentIPs = [];
 
 // ─── Express + WS server ──────────────────────────────────────────────────────
 const app    = express();
@@ -103,9 +95,16 @@ const wss    = new WebSocketServer({ server });
 
 app.use(express.static(publicDir));
 
+// REST endpoint so the browser can always ask for the latest IPs
+app.get('/api/ips', (_, res) => {
+  res.json({ ips: getAllIPs(), port: PORT });
+});
+
 wss.on('connection', (ws) => {
   clients.add(ws);
   ws.send(JSON.stringify({ type: 'history', data: history }));
+  // Send current IPs immediately on connect so QR code is always accurate
+  ws.send(JSON.stringify({ type: 'network', ips: getAllIPs(), port: PORT }));
 
   ws.on('message', (raw) => {
     try {
@@ -137,32 +136,55 @@ function broadcast(obj) {
     if (ws.readyState === OPEN) ws.send(msg);
 }
 
+// ─── Network change watcher ───────────────────────────────────────────────────
+// Polls every 4 seconds. When IPs change, updates the tray tooltip and
+// broadcasts the new addresses to all connected browser clients.
+function watchNetwork() {
+  setInterval(() => {
+    const newIPs = getAllIPs();
+    const changed = newIPs.join(',') !== currentIPs.join(',');
+    if (!changed) return;
+
+    currentIPs = newIPs;
+    console.log('Network changed. New IPs: ' + newIPs.join(', '));
+
+    // Tell all connected browsers about the new network
+    broadcast({ type: 'network', ips: newIPs, port: PORT });
+
+    // Update tray tooltip (best-effort — systray2 may not reflect immediately)
+    if (trayRef) {
+      try {
+        const primary = newIPs[0];
+        trayRef.menu.tooltip = 'ClipTie — http://' + primary + ':' + PORT;
+      } catch (_) {}
+    }
+  }, 4000);
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = 3000;
 server.listen(PORT, '0.0.0.0', () => {
   ensureFirewallRule();
-  const ips  = getAllIPs();
-  const primary = ips[0];
-  const url  = 'http://' + primary + ':' + PORT;
+  currentIPs = getAllIPs();
+  const primary = currentIPs[0];
+  const url = 'http://' + primary + ':' + PORT;
   console.log('ClipTie running at ' + url);
-  if (ips.length > 1)
-    console.log('Other addresses: ' + ips.slice(1).map(ip => 'http://' + ip + ':' + PORT).join(', '));
-  startTray(ips, url);
+  watchNetwork();
+  startTray(currentIPs);
 });
 
 // ─── System tray ──────────────────────────────────────────────────────────────
-function startTray(ips, primaryUrl) {
+function startTray(ips) {
   let SysTray;
   try { SysTray = require('systray2').default; } catch (_) { return; }
 
   const iconPath = writeIcon();
+  const primary  = ips[0];
+  const primaryUrl = 'http://' + primary + ':' + PORT;
 
-  // Build tray items — one "Open" entry per IP address
-  const ipItems = ips.map((ip, i) => {
+  const ipItems = ips.map(ip => {
     const url = 'http://' + ip + ':' + PORT;
-    const label = ips.length > 1
-      ? '⊕  Open — ' + url
-      : '⊕  Open in browser';
+    const label = ips.length > 1 ? '⊕  Open — ' + url : '⊕  Open in browser';
     return { title: label, tooltip: url, checked: false, enabled: true };
   });
 
@@ -183,17 +205,17 @@ function startTray(ips, primaryUrl) {
     copyDir: true
   });
 
-  // seq_id 0 = header, 1 = separator, 2..N = IP items, N+1 = separator, N+2 = Quit
-  const firstIpId  = 2;
-  const lastIpId   = 2 + ips.length - 1;
-  const quitId     = lastIpId + 2; // skip the second separator
+  trayRef = tray;
+
+  const firstIpId = 2;
+  const lastIpId  = 2 + ips.length - 1;
+  const quitId    = lastIpId + 2;
 
   tray.onClick((action) => {
     const id = action.seq_id;
     if (id >= firstIpId && id <= lastIpId) {
-      const ip  = ips[id - firstIpId];
-      const url = 'http://' + ip + ':' + PORT;
-      exec('start ' + url);
+      const ip  = currentIPs[id - firstIpId] || currentIPs[0];
+      exec('start http://' + ip + ':' + PORT);
     } else if (id === quitId) {
       tray.kill();
       process.exit(0);
